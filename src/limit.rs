@@ -1,7 +1,7 @@
 //! Gets limit from `docker.io`'s ratelimitpreview manifest
 
+use super::err::{DrlErr, DrlResult, ExitCode};
 use super::token::Token;
-use super::err::{ExitCode, DrlResult, DrlErr};
 use reqwest::{Client, StatusCode};
 
 /// Gets rate limit from `docker.io`
@@ -23,50 +23,49 @@ pub async fn get_limit(t: &Token) -> DrlResult<String> {
 
     // send request
     let resp = match req.send().await {
-	Ok(r) => r,
-	Err(e) => {
-	    let msg = format!("failed to connect to docker.io: {}", e);
-	    let err = DrlErr::new(msg, ExitCode::Connection);
-	    return Err(err);
-	},
+        Ok(r) => r,
+        Err(e) => {
+            let msg = format!("failed to connect to docker.io: {}", e);
+            let err = DrlErr::new(msg, ExitCode::Connection);
+            return Err(err);
+        }
     };
 
     // check for over limit status code
     match resp.status() {
-	StatusCode::OK => (),
-	StatusCode::TOO_MANY_REQUESTS => {
-	    let msg = String::from("over limit");
-	    let err = DrlErr::new(msg, ExitCode::OverLimit);
-	    return Err(err);
-	},
-	_ => {
-	    let msg = format!("error connecting to docker.io: {}", resp.status());
-	    let err = DrlErr::new(msg, ExitCode::Connection);
-	    return Err(err);
-	},
+        StatusCode::OK => (),
+        StatusCode::TOO_MANY_REQUESTS => {
+            let msg = String::from("over limit");
+            let err = DrlErr::new(msg, ExitCode::OverLimit);
+            return Err(err);
+        }
+        _ => {
+            let msg = format!("error connecting to docker.io: {}", resp.status());
+            let err = DrlErr::new(msg, ExitCode::Connection);
+            return Err(err);
+        }
     };
-
 
     // limits stored in the headers
     let headers = resp.headers();
 
     // get rate limit
     let limit = match headers.get("ratelimit-limit") {
-	Some(l) => l,
-	None => {
-	    let msg = String::from("error parsing rate limit");
-	    let err = DrlErr::new(msg, ExitCode::Parsing);
-	    return Err(err);
-	},
+        Some(l) => l,
+        None => {
+            let msg = String::from("error parsing rate limit");
+            let err = DrlErr::new(msg, ExitCode::Parsing);
+            return Err(err);
+        }
     };
 
     let limit = match limit.to_str() {
-	Ok(l) => l,
-	Err(e) => {
-	    let msg = format!("error parsing rate limit: {}", e);
-	    let err = DrlErr::new(msg, ExitCode::Parsing);
-	    return Err(err);
-	},
+        Ok(l) => l,
+        Err(e) => {
+            let msg = format!("error parsing rate limit: {}", e);
+            let err = DrlErr::new(msg, ExitCode::Parsing);
+            return Err(err);
+        }
     };
 
     // limit needs to be parsed from the form limit;w=window
@@ -75,21 +74,21 @@ pub async fn get_limit(t: &Token) -> DrlResult<String> {
 
     // get remaining limit
     let remaining = match headers.get("ratelimit-remaining") {
-	Some(r) => r,
-	None => {
-	    let msg = String::from("error parsing rate limit");
-	    let err = DrlErr::new(msg, ExitCode::Parsing);
-	    return Err(err);
-	},
+        Some(r) => r,
+        None => {
+            let msg = String::from("error parsing rate limit");
+            let err = DrlErr::new(msg, ExitCode::Parsing);
+            return Err(err);
+        }
     };
 
     let remaining = match remaining.to_str() {
-	Ok(r) => r,
-	Err(e) => {
-	    let msg = format!("error parsing rate limit: {}", e);
-	    let err = DrlErr::new(msg, ExitCode::Parsing);
-	    return Err(err);
-	},
+        Ok(r) => r,
+        Err(e) => {
+            let msg = format!("error parsing rate limit: {}", e);
+            let err = DrlErr::new(msg, ExitCode::Parsing);
+            return Err(err);
+        }
     };
 
     // remaining pulls needs to be parsed from the form remaining;w=window

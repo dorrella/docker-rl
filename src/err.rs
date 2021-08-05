@@ -1,7 +1,7 @@
 //! Exit Codes for libdocker-rl
 
-use std::process;
 use std::fmt;
+use std::process;
 
 /// Exit codes
 #[derive(Debug, Clone, Copy)]
@@ -21,12 +21,12 @@ pub enum ExitCode {
 }
 
 /// Wrapper around result to keep track of `ExitCode`s
-pub type DrlResult<T> = std::result::Result<T,DrlErr>;
+pub type DrlResult<T> = std::result::Result<T, DrlErr>;
 
 impl fmt::Display for DrlErr {
     /// fmt for output
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-	write!(f, "{}", self.msg)
+        write!(f, "{}", self.msg)
     }
 }
 
@@ -42,24 +42,19 @@ pub struct DrlErr {
 impl DrlErr {
     /// Implements constructor
     pub fn new(msg: String, ret: ExitCode) -> DrlErr {
-	DrlErr {
-	    msg,
-	    ret,
-	}
+        DrlErr { msg, ret }
     }
 
     /// Prints message and exits with code
     pub fn err_out(&self) {
-	eprintln!("{}", &self.msg);
-	process::exit(self.ret as i32);
+        eprintln!("{}", &self.msg);
+        process::exit(self.ret as i32);
     }
 }
-
 
 impl Default for DrlErr {
     /// Implement default to make clippy happy
     fn default() -> Self {
-	Self::new(String::new(), ExitCode::Ok)
+        Self::new(String::new(), ExitCode::Ok)
     }
 }
-

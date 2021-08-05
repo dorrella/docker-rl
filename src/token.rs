@@ -2,7 +2,7 @@
 //!
 //! Supports usr/pass with basic authentication
 
-use super::err::{ExitCode, DrlResult, DrlErr};
+use super::err::{DrlErr, DrlResult, ExitCode};
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -18,18 +18,18 @@ pub struct Token {
 impl Token {
     /// Creates an empty token
     pub fn new() -> Token {
-	Token {
-	    token: String::new(),
-	    expires_in: 0,
-	    issued_at: String::new(),
-	}
+        Token {
+            token: String::new(),
+            expires_in: 0,
+            issued_at: String::new(),
+        }
     }
 }
 
 impl Default for Token {
     /// Implement default to make clippy happy
     fn default() -> Self {
-	Self::new()
+        Self::new()
     }
 }
 
@@ -43,41 +43,41 @@ pub async fn get_anon_token() -> DrlResult<Token> {
 
     // send request
     let resp = match req.send().await {
-	Ok(r) => r,
-	Err(e) => {
-	    let msg = format!("failed to connect to docker.io: {}", e);
-	    let err = DrlErr::new(msg, ExitCode::Connection);
-	    return Err(err);
-	},
+        Ok(r) => r,
+        Err(e) => {
+            let msg = format!("failed to connect to docker.io: {}", e);
+            let err = DrlErr::new(msg, ExitCode::Connection);
+            return Err(err);
+        }
     };
 
     // check status for errors
     match resp.status() {
-	StatusCode::OK => (),
-	_ => {
-	    let msg = format!("unknown response {:?}", resp.status());
-	    let err = DrlErr::new(msg, ExitCode::Connection);
-	    return Err(err);
-	},
+        StatusCode::OK => (),
+        _ => {
+            let msg = format!("unknown response {:?}", resp.status());
+            let err = DrlErr::new(msg, ExitCode::Connection);
+            return Err(err);
+        }
     };
 
     let body = match resp.text().await {
-	Ok(b) => b,
-	Err(e) => {
-	    let msg = format!("failed to parse response: {}", e);
-	    let err = DrlErr::new(msg, ExitCode::Body);
-	    return Err(err);
-	},
+        Ok(b) => b,
+        Err(e) => {
+            let msg = format!("failed to parse response: {}", e);
+            let err = DrlErr::new(msg, ExitCode::Body);
+            return Err(err);
+        }
     };
 
     // unmarshal
     let t: Token = match serde_json::from_str(body.as_str()) {
-	Ok(t) => t,
-	Err(e) => {
-	    let msg = format!("failed to parse response: {}", e);
-	    let err = DrlErr::new(msg, ExitCode::Body);
-	    return Err(err);
-	},
+        Ok(t) => t,
+        Err(e) => {
+            let msg = format!("failed to parse response: {}", e);
+            let err = DrlErr::new(msg, ExitCode::Body);
+            return Err(err);
+        }
     };
 
     Ok(t)
@@ -101,45 +101,45 @@ pub async fn get_userpass_token(user: String, pass: String) -> DrlResult<Token> 
 
     // actually send request
     let resp = match req.send().await {
-	Ok(r) => r,
-	Err(e) => {
-	    let msg = format!("failed to connect to docker.io: {}", e);
-	    let err = DrlErr::new(msg, ExitCode::Connection);
-	    return Err(err);
-	},
+        Ok(r) => r,
+        Err(e) => {
+            let msg = format!("failed to connect to docker.io: {}", e);
+            let err = DrlErr::new(msg, ExitCode::Connection);
+            return Err(err);
+        }
     };
 
     // check status for auth errors
     match resp.status() {
-	StatusCode::OK => (),
-	StatusCode::UNAUTHORIZED => {
-	    let msg = format!("authentication failed for {}", &user);
-	    let err = DrlErr::new(msg, ExitCode::Unauthorized);
-	    return Err(err);
-	},
-	_ => {
-	    let msg = format!("unknown response {:?}", resp.status());
-	    let err = DrlErr::new(msg, ExitCode::Connection);
-	    return Err(err);
-	},
+        StatusCode::OK => (),
+        StatusCode::UNAUTHORIZED => {
+            let msg = format!("authentication failed for {}", &user);
+            let err = DrlErr::new(msg, ExitCode::Unauthorized);
+            return Err(err);
+        }
+        _ => {
+            let msg = format!("unknown response {:?}", resp.status());
+            let err = DrlErr::new(msg, ExitCode::Connection);
+            return Err(err);
+        }
     };
 
     let body = match resp.text().await {
-	Ok(b) => b,
-	Err(e) => {
-	    let msg = format!("failed to parse response: {}", e);
-	    let err = DrlErr::new(msg, ExitCode::Body);
-	    return Err(err);
-	},
+        Ok(b) => b,
+        Err(e) => {
+            let msg = format!("failed to parse response: {}", e);
+            let err = DrlErr::new(msg, ExitCode::Body);
+            return Err(err);
+        }
     };
 
     let t: Token = match serde_json::from_str(body.as_str()) {
-	Ok(t) => t,
-	Err(e) => {
-	    let msg = format!("failed to parse response: {}", e);
-	    let err = DrlErr::new(msg, ExitCode::Body);
-	    return Err(err);
-	},
+        Ok(t) => t,
+        Err(e) => {
+            let msg = format!("failed to parse response: {}", e);
+            let err = DrlErr::new(msg, ExitCode::Body);
+            return Err(err);
+        }
     };
 
     Ok(t)
