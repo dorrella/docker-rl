@@ -7,6 +7,8 @@ use reqwest::{Client, StatusCode};
 use std::fmt;
 use std::str::FromStr;
 
+const LIMIT_URL: &str = "https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest";
+
 /// The current state of the rate limit
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Limit {
@@ -62,8 +64,7 @@ where
 /// * `t` - `Token` JWT token from `docker.io`
 pub async fn get_limit(t: &Token) -> DrlResult<Limit> {
     let client = Client::new();
-    let url = "https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest";
-    let req = client.get(url);
+    let req = client.get(LIMIT_URL);
     let req = req.bearer_auth(t.token.as_str());
 
     // send request
