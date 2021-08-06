@@ -71,19 +71,15 @@ async fn main() {
     // parse arguments
     let opts = Opts::parse_args();
 
-    // get auth token for docker hub
-    let result = get_token(opts).await;
-    if let Err(e) = &result {
-        e.err_out();
-    }
+    let token = match get_token(opts).await {
+        Ok(t) => t,
+        Err(e) => e.err_out(),
+    };
 
-    let token = result.unwrap();
+    let limit = match get_limit(&token).await {
+        Ok(l) => l,
+        Err(e) => e.err_out(),
+    };
 
-    // get limit from token
-    let result = get_limit(&token).await;
-    if let Err(e) = &result {
-        e.err_out();
-    }
-
-    println!("{}", result.unwrap());
+    println!("{}", limit);
 }
