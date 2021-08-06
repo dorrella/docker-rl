@@ -2,20 +2,65 @@
 
 use super::err::{DrlErr, DrlResult, ExitCode};
 use super::token::Token;
+use reqwest::header::HeaderMap;
 use reqwest::{Client, StatusCode};
+use std::fmt;
+use std::str::FromStr;
+
+/// The current state of the rate limit
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Limit {
+    /// Number of remaining requests of the rate limit, out of `total`
+    pub remaining: usize,
+    /// Total number of possible requests for the rate limit
+    pub total: usize,
+}
+
+impl fmt::Display for Limit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}/{}", self.remaining, self.total)
+    }
+}
+
+/// Parse the named header `key` from `headers`.
+///
+/// # Errors
+///
+/// An error is returned if there is no header with the passed key, or if the value of the header
+/// cannot be parsed as a `T`
+fn parse_header<T: FromStr>(headers: &HeaderMap, key: &str) -> DrlResult<T>
+where
+    T::Err: fmt::Display,
+{
+    let header = headers
+        .get(key)
+        .ok_or_else(|| DrlErr::new("error parsing rate limit".into(), ExitCode::Parsing))?;
+
+    let value = header.to_str().map_err(|e| {
+        DrlErr::new(
+            format!("error parsing rate limit: {}", e),
+            ExitCode::Parsing,
+        )
+    })?;
+
+    // Take up to the first semicolon, or the end
+    let end = value.find(';').unwrap_or(value.len());
+    let value = &value[..end];
+
+    T::from_str(value).map_err(|e| {
+        DrlErr::new(
+            format!("error parsing rate limit: {}", e),
+            ExitCode::Parsing,
+        )
+    })
+}
 
 /// Gets rate limit from `docker.io`
 ///
 /// # Arguments
 ///
-/// `t` - `Token` JWT token from `docker.io`
-///
-/// # Panics
-///
-/// * Unexpected HTTP status codes
-/// * Missing rate limit information from headers
-/// * Parsing errors related to rate limit headers
-pub async fn get_limit(t: &Token) -> DrlResult<String> {
+/// * `t` - `Token` JWT token from `docker.io`
+pub async fn get_limit(t: &Token) -> DrlResult<Limit> {
     let client = Client::new();
     let url = "https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest";
     let req = client.get(url);
@@ -50,51 +95,8 @@ pub async fn get_limit(t: &Token) -> DrlResult<String> {
     let headers = resp.headers();
 
     // get rate limit
-    let limit = match headers.get("ratelimit-limit") {
-        Some(l) => l,
-        None => {
-            let msg = String::from("error parsing rate limit");
-            let err = DrlErr::new(msg, ExitCode::Parsing);
-            return Err(err);
-        }
-    };
+    let total: usize = parse_header(headers, "ratelimit-limit")?;
+    let remaining: usize = parse_header(headers, "ratelimit-remaining")?;
 
-    let limit = match limit.to_str() {
-        Ok(l) => l,
-        Err(e) => {
-            let msg = format!("error parsing rate limit: {}", e);
-            let err = DrlErr::new(msg, ExitCode::Parsing);
-            return Err(err);
-        }
-    };
-
-    // limit needs to be parsed from the form limit;w=window
-    let tokens: Vec<&str> = limit.split(';').collect();
-    let limit = String::from(tokens[0]);
-
-    // get remaining limit
-    let remaining = match headers.get("ratelimit-remaining") {
-        Some(r) => r,
-        None => {
-            let msg = String::from("error parsing rate limit");
-            let err = DrlErr::new(msg, ExitCode::Parsing);
-            return Err(err);
-        }
-    };
-
-    let remaining = match remaining.to_str() {
-        Ok(r) => r,
-        Err(e) => {
-            let msg = format!("error parsing rate limit: {}", e);
-            let err = DrlErr::new(msg, ExitCode::Parsing);
-            return Err(err);
-        }
-    };
-
-    // remaining pulls needs to be parsed from the form remaining;w=window
-    let tokens: Vec<&str> = remaining.split(';').collect();
-    let remaining = String::from(tokens[0]);
-
-    let msg = format!("{}/{}", remaining, limit);
-    Ok(msg)
+    Ok(Limit { remaining, total })
 }
