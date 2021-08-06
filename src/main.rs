@@ -41,18 +41,18 @@ use rpassword::read_password_from_tty;
 ///
 /// * `opts` - `Opts` struct with parsed options
 async fn get_token(opts: Opts) -> DrlResult<Token> {
-    let basic_auth: bool = opts.user.is_some();
+    let Opts { user, pass } = opts;
 
-    if basic_auth {
-        let user = opts.user.unwrap();
-        let pass = match &opts.pass {
-            Some(p) => String::from(p),
+    if let Some(user) = user {
+        let pass = match pass {
+            Some(p) => p,
             None => {
                 // rpassword docs say:
                 //   Prompt for a password on TTY (safest but not always most practical
                 //   when integrating with other tools or unit testing)
                 //
                 // should this have error handling?
+                // should there be options for other prompts?
 
                 let prompt = format!("Password for {}: ", user);
                 read_password_from_tty(Some(prompt.as_str())).unwrap()
@@ -71,19 +71,15 @@ async fn main() {
     // parse arguments
     let opts = Opts::parse_args();
 
-    // get auth token for docker hub
-    let result = get_token(opts).await;
-    if let Err(e) = &result {
-        e.err_out();
-    }
+    let token = match get_token(opts).await {
+        Ok(t) => t,
+        Err(e) => e.err_out(),
+    };
 
-    let token = result.unwrap();
+    let limit = match get_limit(&token).await {
+        Ok(l) => l,
+        Err(e) => e.err_out(),
+    };
 
-    // get limit from token
-    let result = get_limit(&token).await;
-    if let Err(e) = &result {
-        e.err_out();
-    }
-
-    println!("{}", result.unwrap());
+    println!("{}", limit);
 }
