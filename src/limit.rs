@@ -64,7 +64,7 @@ where
 /// * `t` - `Token` JWT token from `docker.io`
 pub async fn get_limit(t: &Token) -> DrlResult<Limit> {
     let client = Client::new();
-    let req = client.get(LIMIT_URL);
+    let req = client.head(LIMIT_URL);
     let req = req.bearer_auth(t.token.as_str());
 
     // send request

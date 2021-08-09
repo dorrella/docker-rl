@@ -3,11 +3,15 @@
 Small program to check the current rate limit cap on Docker Hub, because they
 can't be bothered to do it themselves.
 
-
-**NOTE:** Each call will use one of the limit requests.
-
-See [This blog](https://www.docker.com/blog/checking-your-current-docker-pull-rate-limits-and-status/)
+See [this blog](https://www.docker.com/blog/checking-your-current-docker-pull-rate-limits-and-status/)
 for more information.
+
+## Limits
+
+* The returned value isn't accurate.
+* Rates are not returned for all account types.
+
+See [the docs](https://docs.docker.com/docker-hub/download-rate-limit/) for more information.
 
 # Install
 
